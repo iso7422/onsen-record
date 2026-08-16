@@ -25,7 +25,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
 .menu button:hover{background:#eee}
 
 .onsen-marker{width:38px;height:38px;background:#e53935;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
-.onsen-marker span{color:white;font-size:23px;font-weight:bold;transform:rotate(45deg);line-height:1}
+.onsen-marker span{color:white;font-size:23px;font-weight:bold;transform:rotate(45deg);line-height:1}.onsen-marker.unvisited{background:#c9c9c9}.onsen-marker.unvisited span{color:#fff}
 
 #overlay{display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.35);pointer-events:auto}
 #registerPanel,#listPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;pointer-events:auto;width:90%;max-width:440px;max-height:90vh;overflow-y:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 25px rgba(0,0,0,.35);box-sizing:border-box}
@@ -486,6 +486,64 @@ function renderPhotoPreview(){
 
 const stars=document.querySelectorAll('.star');
 
+
+const YAMAGUCHI_ONSEN_SEED = [
+{name:'玉仙閣',address:'山口県長門市深川湯本1234',lat:34.32600,lng:131.17540,quality:'弱アルカリ性単純泉',features:[]},
+{name:'大谷山荘',address:'山口県長門市深川湯本2208',lat:34.326039,lng:131.175167,quality:'アルカリ性単純温泉',features:['露天風呂','サウナ']},
+{name:'湯本観光ホテル西京',address:'山口県長門市深川湯本1051',lat:34.330555,lng:131.1677905,quality:'アルカリ性単純温泉',features:['露天風呂','サウナ']},
+{name:'湯免ふれあいセンター',address:'山口県長門市三隅中湯免251-6',lat:34.2810,lng:131.1835,quality:'アルカリ性単純温泉',features:['露天風呂','サウナ']},
+{name:'ホテル楊貴館',address:'山口県長門市油谷伊上10130',lat:34.370696,lng:131.029627,quality:'アルカリ性単純温泉',features:['露天風呂','サウナ','家族風呂']},
+{name:'黄波戸温泉交流センター',address:'山口県長門市日置上3137-1',lat:34.397035,lng:131.132575,quality:'アルカリ性単純温泉',features:[]},
+{name:'俵山温泉',address:'山口県長門市俵山5113',lat:34.2912294,lng:131.1014602,quality:'アルカリ性単純温泉',features:['家族風呂']},
+{name:'一の俣温泉グランドホテル',address:'山口県下関市豊田町一ノ俣湯ノ原15',lat:34.2830,lng:131.0570,quality:'アルカリ性単純硫黄温泉',features:['露天風呂','家族風呂']},
+{name:'一の俣温泉観光ホテル',address:'山口県下関市豊田町一ノ俣1711',lat:34.283485,lng:131.057617,quality:'アルカリ性単純硫黄温泉',features:['露天風呂','家族風呂']},
+{name:'藤乃湯',address:'山口県下関市豊田町一ノ俣1718-6',lat:34.2837,lng:131.0572,quality:'アルカリ性単純硫黄温泉',features:['源泉かけ流し']},
+{name:'ぴーすふる青竜泉',address:'山口県下関市豊浦町川棚湯町5159-2',lat:34.1371927,lng:130.9386491,quality:'ナトリウム・カルシウム‐塩化物温泉',features:['露天風呂','サウナ','水風呂','家族風呂','源泉かけ流し']},
+{name:'玉椿旅館',address:'山口県下関市豊浦町川棚5132',lat:34.138096,lng:130.938373,quality:'ナトリウム・カルシウム塩化物温泉',features:['家族風呂','源泉かけ流し']},
+{name:'川棚グランドホテルお多福',address:'山口県下関市豊浦町川棚4912-1',lat:34.1397116,lng:130.9396269,quality:'ナトリウム・カルシウム塩化物温泉',features:['露天風呂','家族風呂']},
+{name:'藤屋',address:'山口県下関市豊浦町川棚5178',lat:34.13755,lng:130.9389,quality:'ナトリウム・カルシウム塩化物温泉',features:[]},
+{name:'小天狗旅館',address:'山口県下関市豊浦町川棚5153',lat:34.1371151,lng:130.9381031,quality:'含弱放射能・ナトリウム・カルシウム・塩化物温泉',features:['源泉かけ流し']},
+{name:'竹園旅館',address:'山口県下関市豊浦町川棚5155',lat:34.137388,lng:130.938295,quality:'カルシウム・ナトリウム-塩化物温泉',features:['源泉かけ流し']},
+{name:'日之出温泉',address:'山口県下関市大和町1-12-12',lat:33.9449811,lng:130.9173948,quality:'ナトリウムー塩化物冷鉱泉',features:[]},
+{name:'吉見温泉センター',address:'山口県下関市吉見上395-1',lat:34.0823296,lng:130.9170916,quality:'アルカリ性単純温泉',features:['家族風呂']},
+{name:'片倉温泉くぼた',address:'山口県宇部市西岐波5345',lat:33.9731127,lng:131.299067,quality:'ラドン含有',features:[]},
+{name:'於福温泉 道の駅おふく',address:'山口県美祢市於福町上4383-1',lat:34.2382754,lng:131.208378,quality:'単純温泉',features:['源泉かけ流し']},
+{name:'天然温泉みちしお',address:'山口県山陽小野田市埴生2216-18',lat:34.0405,lng:131.1270,quality:'含弱放射能ナトリウム・カルシウム・塩化物冷鉱泉',features:['露天風呂','サウナ']},
+{name:'天宿の杜 桂月',address:'山口県美祢市美東町真名1071',lat:34.1598884,lng:131.3452574,quality:'フッ化物イオン含有',features:['露天風呂']},
+{name:'山口ふれあい館',address:'山口県山口市宮野上1222',lat:34.219468,lng:131.513012,quality:'アルカリ性単純温泉',features:[]},
+{name:'長沢ガーデン',address:'山口県山口市鋳銭司2296',lat:34.0505,lng:131.4950,quality:'単純弱放射能冷鉱泉',features:[]},
+{name:'海眺の宿 あいお荘',address:'山口県山口市秋穂東768-13',lat:33.9934045,lng:131.4357815,quality:'単純弱放射能冷鉱泉',features:['露天風呂','家族風呂']},
+{name:'願成就温泉',address:'山口県山口市阿東徳佐上2-95',lat:34.4342004,lng:131.7705294,quality:'単純弱放射能温泉',features:['家族風呂']},
+{name:'ロハス島地温泉',address:'山口県山口市徳地島地2102-4',lat:34.2520,lng:131.7080,quality:'単純弱放射能冷鉱泉',features:[]},
+{name:'防長苑',address:'山口県山口市熊野町4-29',lat:34.1673955,lng:131.459732,quality:'弱アルカリ性単純泉',features:[]},
+{name:'KKR山口あさくら',address:'山口県山口市神田町2-18',lat:34.1711852,lng:131.4561873,quality:'アルカリ性単純温泉',features:[]},
+{name:'セントコア山口',address:'山口県山口市湯田温泉3-2-7',lat:34.1658,lng:131.4582,quality:'アルカリ性単純温泉',features:[]},
+{name:'梅乃屋',address:'山口県山口市湯田温泉4-3-19',lat:34.1657,lng:131.4568,quality:'弱アルカリ性単純泉',features:[]},
+{name:'かめ福オンプレイス ふくふくの湯',address:'山口県山口市湯田温泉4-5-2',lat:34.1659,lng:131.4561,quality:'アルカリ単純泉',features:[]},
+{name:'ホテル喜良久',address:'山口県山口市湯田温泉4-4-3',lat:34.1662,lng:131.4565,quality:'アルカリ単純泉',features:[]},
+{name:'温泉の森',address:'山口県山口市湯田温泉4-7-17',lat:34.1657,lng:131.4578,quality:'アルカリ単純泉',features:['露天風呂','サウナ','水風呂']},
+{name:'西の雅 常盤',address:'山口県山口市湯田温泉4-6-4',lat:34.1658,lng:131.4572,quality:'単純アルカリ性温泉',features:['露天風呂']},
+{name:'日本海温泉 鹿島の湯 道の駅阿武町',address:'山口県阿武郡阿武町奈古2253-1',lat:34.5010,lng:131.4680,quality:'カルシウム・ナトリウム塩化物温泉',features:[]},
+{name:'萩阿武川温泉 ふれあい会館',address:'山口県萩市川上4892-1',lat:34.35928,lng:131.481108,quality:'アルカリ性単純温泉',features:['サウナ']},
+{name:'田万川温泉 憩いの湯',address:'山口県萩市下田万',lat:34.6760,lng:131.6700,quality:'ナトリウム・カルシウム塩化物冷鉱泉',features:[]},
+{name:'萩本陣',address:'山口県萩市椿東385-8',lat:34.418965,lng:131.419382,quality:'カルシウム・ナトリウム塩化物温泉',features:['露天風呂','家族風呂']},
+{name:'はぎ温泉',address:'山口県萩市椿東6089-4',lat:34.4040,lng:131.4120,quality:'塩化物冷鉱泉',features:['家族風呂']},
+{name:'芳山園',address:'山口県周南市湯野4255-1',lat:34.0930,lng:131.6748,quality:'含硫黄・弱放射能アルカリ性単純温泉',features:['露天風呂']},
+{name:'紫水園',address:'山口県周南市湯野4341',lat:34.0940,lng:131.6760,quality:'含硫黄・弱放射能アルカリ性単純温泉',features:['露天風呂']},
+{name:'石船温泉 憩の家',address:'山口県周南市鹿野上1667-4',lat:34.2170,lng:131.8060,quality:'フッ化物イオン・メタケイ酸含有',features:['源泉かけ流し']},
+{name:'東善寺やすらぎの里',address:'山口県周南市小松原1706-1',lat:34.0345,lng:131.9945,quality:'含硫黄・放射能アルカリ性単純温泉',features:['家族風呂']},
+{name:'呼鶴温泉',address:'山口県周南市安田1814',lat:34.0630,lng:132.0050,quality:'単純弱放射能冷鉱泉',features:[]},
+{name:'くだまつ健康パーク',address:'山口県下松市平田448',lat:34.0155411,lng:131.8429615,quality:'ナトリウム・カルシウム塩化物強塩冷鉱泉',features:['サウナ']},
+{name:'片添ヶ浜温泉 遊湯ランド',address:'山口県周防大島町平野1195',lat:33.901102,lng:132.3634702,quality:'含弱放射能ナトリウム塩化物冷鉱泉',features:['家族風呂']},
+{name:'竜崎温泉ちどり',address:'山口県周防大島町東安下庄',lat:33.8931609,lng:132.2901643,quality:'含弱放射能ナトリウム塩化物強塩冷鉱泉',features:['露天風呂','家族風呂']},
+{name:'錦帯橋温泉 岩国国際観光ホテル',address:'山口県岩国市岩国1-1-7',lat:34.1660,lng:132.1780,quality:'単純弱放射能冷鉱泉',features:['露天風呂','サウナ','家族風呂']}
+];
+function seedYamaguchiOnsens(){
+ const records=getRecords();
+ const existing=new Set(records.map(r=>String(r.seedKey||r.name)));
+ let changed=false;
+ YAMAGUCHI_ONSEN_SEED.forEach((s,i)=>{const key='yamaguchi-'+i; if(!existing.has(key) && !records.some(r=>r.name===s.name && r.prefecture==='山口県')){records.push({id:900000000+i,seedKey:key,name:s.name,address:s.address,lat:s.lat,lng:s.lng,rating:0,favorite:false,prefecture:'山口県',visitDate:'',price:'',quality:s.quality,tags:[],features:s.features||[],memo:'',photos:[],photo:null,website:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.name+' '+s.address),date:''});changed=true;}}); if(changed)saveRecords(records);}
+
 function getRecords(){
     return JSON.parse(localStorage.getItem('onsenRecords')||'[]');
 }
@@ -629,7 +687,7 @@ document.getElementById('saveButton').addEventListener('click',()=>{
 function addOnsenMarker(onsen){
     const icon=L.divIcon({
         className:'',
-        html:'<div class="onsen-marker"><span>♨</span></div>',
+        html:`<div class="onsen-marker ${onsen.visitDate?'':'unvisited'}"><span>♨</span></div>`,
         iconSize:[44,44],
         iconAnchor:[22,44],
         popupAnchor:[0,-44]
@@ -648,7 +706,7 @@ function addOnsenMarker(onsen){
         <div class="popup-title">♨️ ${escapeHtml(onsen.name)} ${onsen.favorite?'❤️':''}</div>
         ${((onsen.photos&&onsen.photos.length)?onsen.photos:(onsen.photo?[onsen.photo]:[])).map(src=>`<img class="popup-photo" src="${src}" alt="${escapeHtml(onsen.name)}">`).join('')}
         <div class="popup-stars">${starsText}</div>
-        📅 ${escapeHtml(onsen.date)}<br>
+        📅 ${onsen.visitDate?escapeHtml(onsen.visitDate):'未訪問'}<br>
         ☑️ ${escapeHtml(featuresText)}<br><br>
         📝 ${onsen.memo?escapeHtml(onsen.memo):'メモなし'}
         ${onsen.website?`<br><a class="popup-link" href="${escapeHtml(onsen.website)}" target="_blank" rel="noopener noreferrer">🌐 ウェブサイトを開く</a>`:''}
@@ -749,9 +807,12 @@ function closeOnsenDetail(){
 
 document.getElementById('detailClose').addEventListener('click',closeOnsenDetail);
 
+seedYamaguchiOnsens();
 loadOnsens();
 function navigateToOnsen(lat,lng){
-    const url=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat+','+lng)}`;
+    const onsen=getRecords().find(o=>Number(o.lat)===Number(lat)&&Number(o.lng)===Number(lng));
+    const destination=onsen ? (onsen.name+' '+(onsen.address||'')) : (lat+','+lng);
+    const url=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
     window.open(url,'_blank');
 }
 
@@ -1110,7 +1171,6 @@ importFile.addEventListener('change',()=>{
     reader.readAsText(file);
 });
 
-loadOnsens();
 
 function updateExtraStats(){
  const records=getRecords(), counts={};
