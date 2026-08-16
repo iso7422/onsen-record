@@ -156,6 +156,13 @@ button, .btn, .leaflet-control-zoom a {
   }
 }
 
+
+#exitScreen{display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+.exit-card{width:min(420px,100%);background:#fff;border-radius:20px;padding:30px 22px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.35);box-sizing:border-box}
+.exit-icon{font-size:48px;margin-bottom:6px}.exit-card h2{margin:6px 0 12px;font-size:24px}.exit-card p{line-height:1.7;color:#444}.exit-card button{border:none;border-radius:10px;background:#222;color:#fff;padding:14px 28px;font-size:17px;font-weight:bold;cursor:pointer;margin-top:10px}.exit-note{font-size:12px!important;color:#888!important;margin:18px 0 0}
+.exit-button{background:#222!important;color:#fff!important}
+@media(max-width:600px){.exit-card{padding:26px 18px}.exit-card button{width:100%;padding:15px}}
+
 </style>
 </head>
 
@@ -168,6 +175,7 @@ button, .btn, .leaflet-control-zoom a {
     <button id="listButton">📋 温泉一覧</button>
     <button id="statsButton">📊 記録を見る</button>
     <button id="backupButton">💾 バックアップ</button>
+    <button id="exitButton" class="exit-button">⏻ 終了</button>
 </div>
 
 <div id="map"></div>
@@ -213,6 +221,16 @@ button, .btn, .leaflet-control-zoom a {
 <div id="detailPanel">
     <button class="close-button" id="detailClose">×</button>
     <div id="detailContent"></div>
+</div>
+
+<div id="exitScreen">
+    <div class="exit-card">
+        <div class="exit-icon">♨️</div>
+        <h2>バックアップ完了</h2>
+        <p id="exitMessage">温泉記録をバックアップしました。<br>この画面を閉じてアプリを終了してください。</p>
+        <button id="closeAppButton">⏻ 閉じる</button>
+        <p class="exit-note">※ Webアプリはスマホ側から完全に終了させる必要があります。</p>
+    </div>
 </div>
 
 <div id="backupPanel">
@@ -1014,23 +1032,52 @@ backupClose.addEventListener('click',()=>{
     document.getElementById('overlay').style.display='none';
 });
 
-exportButton.addEventListener('click',()=>{
+function createBackupFile(){
     const records=getRecords();
     const data={
         app:'温泉記録',
-        version:2,
+        version:3,
         exportedAt:new Date().toISOString(),
         records
     };
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    const date=new Date().toISOString().slice(0,10);
+    const now=new Date();
+    const pad=n=>String(n).padStart(2,'0');
+    const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
     a.href=url;
-    a.download=`onsen-backup-${date}.json`;
+    a.download=`onsen-backup-${stamp}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    alert('💾 バックアップを保存しました！');
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    return records.length;
+}
+
+exportButton.addEventListener('click',()=>{
+    const count=createBackupFile();
+    alert(`💾 バックアップを保存しました！\n${count}件の温泉記録`);
+});
+
+const exitButton=document.getElementById('exitButton');
+const exitScreen=document.getElementById('exitScreen');
+const closeAppButton=document.getElementById('closeAppButton');
+
+exitButton.addEventListener('click',()=>{
+    const count=createBackupFile();
+    backupPanel.style.display='none';
+    document.getElementById('overlay').style.display='none';
+    exitScreen.style.display='flex';
+    document.getElementById('exitMessage').innerHTML=
+        `温泉記録をバックアップしました。<br><strong>${count}件</strong>の記録を保存しています。<br>この画面を閉じてアプリを終了してください。`;
+});
+
+closeAppButton.addEventListener('click',()=>{
+    // Webアプリはブラウザから完全終了できない場合があるため、まず画面を終了状態にする。
+    exitScreen.style.display='none';
+    try{ window.close(); }catch(e){}
+    alert('♨️ バックアップ完了！\nホーム画面からアプリを閉じてください。');
 });
 
 importButton.addEventListener('click',()=>importFile.click());
