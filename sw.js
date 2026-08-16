@@ -1,4 +1,4 @@
-const CACHE_NAME = 'onsen-record-v3';
+const CACHE_NAME = 'onsen-record-v1';
 const APP_SHELL = [
   './',
   './index.html',
