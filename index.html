@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="温泉記録">
+<link rel="manifest" href="manifest.webmanifest">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>♨️ 温泉記録</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#map{width:100%;height:100vh}
+.title{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:white;padding:10px 20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:20px;font-weight:bold}
+.menu{position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px}@media(max-width:600px){.title{font-size:17px;padding:8px 14px;top:8px}.menu{top:auto;bottom:12px;left:10px;right:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.menu button{padding:12px 5px;font-size:13px}.leaflet-control-zoom{margin-bottom:80px!important}.popup-photo{max-width:230px;max-height:160px}#registerPanel,#listPanel,#statsPanel{width:94%;max-height:84vh;padding:16px}.panel-buttons button{padding:13px 8px}.checkbox-group{grid-template-columns:1fr 1fr}.onsen-marker{width:36px;height:36px}.onsen-marker span{font-size:21px}}
+.menu button{background:white;border:none;border-radius:8px;padding:10px 15px;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.menu button:hover{background:#eee}
+
+.onsen-marker{width:38px;height:38px;background:#e53935;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
+.onsen-marker span{color:white;font-size:23px;font-weight:bold;transform:rotate(45deg);line-height:1}
+
+#overlay{display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.35);pointer-events:auto}
+#registerPanel,#listPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;pointer-events:auto;width:90%;max-width:440px;max-height:90vh;overflow-y:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 25px rgba(0,0,0,.35);box-sizing:border-box}
+#registerPanel h2,#listPanel h2{margin-top:0}
+.form-group{margin-bottom:15px}
+.form-group label{display:block;font-weight:bold;margin-bottom:6px}
+#onsenName{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px}
+.stars{display:flex;gap:5px}
+.star{font-size:30px;cursor:pointer;color:#ccc}
+.star.selected{color:#ffb300}
+.checkbox-group{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checkbox-group label{background:#f5f5f5;padding:10px;border-radius:8px;cursor:pointer}
+#memo{width:100%;box-sizing:border-box;min-height:80px;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px;resize:vertical}
+.panel-buttons{display:flex;gap:10px;margin-top:20px}
+.panel-buttons button{flex:1;padding:12px;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+#saveButton{background:#e53935;color:white}
+#cancelButton{background:#ddd}
+
+.close-button{float:right;border:none;background:#eee;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer}
+.list-count{margin-bottom:12px;font-weight:bold}
+.search-box{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;margin-bottom:10px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{border:1px solid #ccc;background:#fff;border-radius:20px;padding:7px 10px;cursor:pointer}
+.filters button.active{background:#e53935;color:#fff;border-color:#e53935}
+.onsen-list{display:flex;flex-direction:column;gap:8px}
+.onsen-item{border:1px solid #ddd;border-radius:10px;padding:12px;cursor:pointer}
+.onsen-item:hover{background:#f7f7f7}
+.onsen-item-title{font-weight:bold;font-size:16px}
+.onsen-item-stars{color:#ffb300}
+.onsen-item-meta{font-size:13px;color:#666;margin-top:3px}
+.popup-title{font-size:17px;font-weight:bold}
+.popup-stars{color:#ffb300;font-size:18px}
+.popup-buttons{display:flex;gap:8px;margin-top:12px}
+.popup-buttons button{border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:14px}.navigate-button{background:#e8f4ff}.edit-button{background:#f2f2f2}.delete-button{background:#fff0f0}
+.edit-button{background:#eee}
+.delete-button{background:#e53935;color:white}
+.empty-list{text-align:center;color:#777;padding:25px 10px}
+
+#onsenName,#memo{pointer-events:auto;user-select:text;-webkit-user-select:text}
+
+#statsPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;width:90%;max-width:440px;max-height:90vh;overflow-y:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 25px rgba(0,0,0,.35);box-sizing:border-box}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.stat-card{background:#f6f6f6;border-radius:12px;padding:14px;text-align:center}
+.stat-number{font-size:28px;font-weight:bold;margin-bottom:4px}
+#featureStats{display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.feature-row{display:flex;justify-content:space-between;background:#f7f7f7;border-radius:8px;padding:8px 10px}
+#recentStats{display:flex;flex-direction:column;gap:7px}
+.recent-row{border:1px solid #ddd;border-radius:9px;padding:9px}
+
+
+#onsenPhoto{width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:6px;background:#fff}
+#website{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px}
+.photo-preview{margin-top:8px}
+.photo-preview{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}.photo-preview img{display:block;width:100%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+.remove-photo-button{display:none;margin-top:8px;border:1px solid #ccc;background:#f5f5f5;border-radius:6px;padding:7px 10px;cursor:pointer}
+.popup-photo{display:block;width:100%;max-width:260px;max-height:180px;object-fit:cover;border-radius:8px;margin:8px 0}
+.popup-link{display:inline-block;margin-top:8px}
+
+
+.favorite-check{display:flex!important;align-items:center;gap:8px;background:#fff1f3;padding:10px;border-radius:8px;cursor:pointer}
+.favorite-check input{width:18px;height:18px}
+.favorite-badge{color:#e53935;font-weight:bold}
+
+
+#backupPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;width:90%;max-width:440px;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 25px rgba(0,0,0,.35);box-sizing:border-box}
+#backupPanel .panel-buttons button{background:#f5f5f5}
+
+
+#detailPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;width:92%;max-width:560px;max-height:90vh;overflow-y:auto;background:#fff;padding:20px;border-radius:16px;box-shadow:0 8px 35px rgba(0,0,0,.4);box-sizing:border-box}
+.detail-title{font-size:25px;font-weight:700;margin:2px 38px 8px 0}
+.detail-favorite{font-size:20px;margin-left:4px}
+.detail-stars{font-size:23px;letter-spacing:2px;margin:6px 0 12px}
+.detail-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.detail-gallery img{width:100%;height:190px;object-fit:cover;border-radius:10px;cursor:pointer}
+.detail-section{border-top:1px solid #eee;padding:13px 0}
+.detail-section-title{font-weight:700;margin-bottom:7px}
+.detail-features{display:flex;flex-wrap:wrap;gap:6px}
+.detail-feature{background:#f3f3f3;border-radius:999px;padding:6px 10px;font-size:13px}
+.detail-memo{white-space:pre-wrap;line-height:1.6}
+.detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.detail-actions button{padding:12px 8px;border:0;border-radius:8px;cursor:pointer;font-size:14px}
+.detail-nav{background:#e8f4ff}.detail-edit{background:#f2f2f2}.detail-delete{background:#fff0f0}
+.detail-link{display:inline-block;padding:9px 12px;background:#f5f5f5;border-radius:8px;text-decoration:none;color:#222}
+@media(max-width:600px){#detailPanel{width:94%;max-height:84vh;padding:16px}.detail-title{font-size:21px}.detail-gallery img{height:145px}.detail-actions{grid-template-columns:1fr 1fr}}
+
+
+#visitDate,#price,#quality,#tags{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px}
+.form-help{font-size:12px;color:#777;margin-top:4px}
+.detail-tags{display:flex;flex-wrap:wrap;gap:6px}
+.detail-tag{background:#fff3d9;border-radius:999px;padding:6px 10px;font-size:13px}
+
+#prefecture{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:16px}.pref-stats{display:flex;flex-direction:column;gap:7px}.pref-row{display:flex;justify-content:space-between;background:#f7f7f7;border-radius:8px;padding:8px 10px}.history-list{display:flex;flex-direction:column;gap:7px}.history-row{display:grid;grid-template-columns:100px 1fr 80px;gap:8px;padding:8px 10px;background:#f7f7f7;border-radius:8px}@media(max-width:600px){.history-row{grid-template-columns:82px 1fr}.history-row .history-pref{grid-column:2}}
+/* ===== スマホ/PWA向け ===== */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+body {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea {
+  font-size: 16px; /* iPhoneの入力時ズーム防止 */
+}
+button, .btn, .leaflet-control-zoom a {
+  touch-action: manipulation;
+}
+@media (max-width: 700px) {
+  body { overflow-x: hidden; }
+  #map { min-height: 100svh; }
+  .panel, .modal, .side-panel {
+    max-width: 100vw !important;
+    box-sizing: border-box;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .leaflet-control-zoom a {
+    width: 42px !important;
+    height: 42px !important;
+    line-height: 42px !important;
+    font-size: 24px !important;
+  }
+}
+
+</style>
+</head>
+
+<body>
+<div class="title">♨️ 温泉記録</div>
+
+<div class="menu">
+    <button id="locationButton">📍 現在地</button>
+    <button id="addOnsenButton">♨️ 温泉を追加</button>
+    <button id="listButton">📋 温泉一覧</button>
+    <button id="statsButton">📊 記録を見る</button>
+    <button id="backupButton">💾 バックアップ</button>
+</div>
+
+<div id="map"></div>
+<div id="overlay"></div>
+
+
+<div id="statsPanel"><div class="detail-section"><div class="detail-section-title">🗾 都道府県別</div><div id="prefectureStats"></div><div class="detail-section-title" style="margin-top:14px">📅 訪問履歴</div><div id="visitHistory"></div></div>
+    <button class="close-button" id="statsClose">×</button>
+    <h2>📊 温泉コレクション</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="statTotal">0</div>
+            <div>♨️ 記録した温泉</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statFive">0</div>
+            <div>⭐ 星5の温泉</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statFavorite">0</div>
+            <div>❤️ お気に入り</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statAverage">0.0</div>
+            <div>平均評価</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statSauna">0</div>
+            <div>🧖 サウナあり</div>
+        </div>
+    </div>
+
+    <h3>設備別</h3>
+    <div id="featureStats"></div>
+
+    <h3>最近記録した温泉</h3>
+    <div id="recentStats"></div>
+</div>
+
+
+
+<div id="detailPanel">
+    <button class="close-button" id="detailClose">×</button>
+    <div id="detailContent"></div>
+</div>
+
+<div id="backupPanel">
+    <button class="close-button" id="backupClose">×</button>
+    <h2>💾 データ管理</h2>
+    <p>温泉記録をファイルに保存したり、以前のバックアップから復元できます。</p>
+    <div class="panel-buttons">
+        <button id="exportButton">📤 バックアップ保存</button>
+        <button id="importButton">📥 復元</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    <p style="font-size:13px;color:#666;margin-top:12px">
+        ※ 復元すると現在の温泉記録はバックアップの内容に置き換わります。
+    </p>
+</div>
+
+<div id="registerPanel">
+    <button class="close-button" id="registerClose">×</button>
+    <h2 id="panelTitle">♨️ 温泉を記録</h2>
+
+    <div class="form-group">
+        <label>温泉名</label>
+        <input type="text" id="onsenName" placeholder="例：俵山温泉">
+    </div>
+
+    <div class="form-group">
+        <div class="form-group">
+<label>🗾 都道府県</label>
+<select id="prefecture"><option value="">選択してください</option>
+<option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option><option>山形県</option><option>福島県</option>
+<option>茨城県</option><option>栃木県</option><option>群馬県</option><option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option>
+<option>新潟県</option><option>富山県</option><option>石川県</option><option>福井県</option><option>山梨県</option><option>長野県</option><option>岐阜県</option><option>静岡県</option><option>愛知県</option>
+<option>三重県</option><option>滋賀県</option><option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+<option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option>
+<option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option>
+<option>福岡県</option><option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option><option>鹿児島県</option><option>沖縄県</option>
+</select></div><label>📅 訪問日</label>
+        <input type="date" id="visitDate">
+    </div>
+
+    <div class="form-group">
+        <label>💰 入浴料金（任意）</label>
+        <input type="number" id="price" min="0" step="1" placeholder="例：800"> 円
+    </div>
+
+    <div class="form-group">
+        <label>💧 泉質（任意）</label>
+        <input type="text" id="quality" placeholder="例：アルカリ性単純温泉">
+    </div>
+
+    <div class="form-group">
+        <label>🏷️ タグ（任意）</label>
+        <input type="text" id="tags" placeholder="家族向け、熱め、景色最高">
+        <div class="form-help">カンマ（,）または読点（、）で区切って入力</div>
+    </div>
+
+    <div class="form-group">
+        <label>お気に入り</label>
+        <label class="favorite-check">
+            <input type="checkbox" id="favorite">
+            ❤️ また行きたい温泉
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>満足度</label>
+        <div class="stars">
+            <span class="star" data-value="1">★</span>
+            <span class="star" data-value="2">★</span>
+            <span class="star" data-value="3">★</span>
+            <span class="star" data-value="4">★</span>
+            <span class="star" data-value="5">★</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>設備・特徴</label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" value="露天風呂"> 露天風呂</label>
+            <label><input type="checkbox" value="サウナ"> サウナ</label>
+            <label><input type="checkbox" value="水風呂"> 水風呂</label>
+            <label><input type="checkbox" value="家族風呂"> 家族風呂</label>
+            <label><input type="checkbox" value="源泉かけ流し"> 源泉かけ流し</label>
+            <label><input type="checkbox" value="食事処"> 食事処</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>写真（任意・最大5枚）</label>
+        <input type="file" id="onsenPhoto" accept="image/*" multiple>
+        <div id="photoPreview" class="photo-preview"></div>
+        <button type="button" id="removePhotoButton" class="remove-photo-button">写真を全部削除</button>
+    </div>
+
+    <div class="form-group">
+        <label>ウェブサイト（任意）</label>
+        <input type="url" id="website" placeholder="https://example.com">
+    </div>
+
+    <div class="form-group">
+        <label>メモ</label>
+        <textarea id="memo" placeholder="お湯がぬるめ、また行きたい！など"></textarea>
+    </div>
+
+    <div class="panel-buttons">
+        <button id="cancelButton">キャンセル</button>
+        <button id="saveButton">💾 記録する</button>
+    </div>
+</div>
+
+<div id="listPanel">
+    <button class="close-button" id="listClose">×</button>
+    <h2>📋 温泉一覧</h2>
+    <div class="list-count" id="listCount"></div>
+    <input class="search-box" id="searchBox" placeholder="温泉名・メモを検索">
+    <div class="filters">
+        <button class="filter-button active" data-filter="all">すべて</button>
+        <button class="filter-button" data-filter="favorite">❤️ お気に入り</button>
+        <button class="filter-button" data-filter="5">⭐5</button>
+        <button class="filter-button" data-filter="sauna">サウナ</button>
+        <button class="filter-button" data-filter="family">家族風呂</button>
+        <button class="filter-button" data-filter="open">露天風呂</button>
+        <button class="filter-button" data-filter="kakenagashi">源泉かけ流し</button>
+    </div>
+    <div class="onsen-list" id="onsenList"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const map = L.map('map').setView([34.18,131.47],9);
+
+// ===== 地理院地図レイヤー =====
+const gsiStandard = L.tileLayer(
+    'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+    {
+        maxZoom: 18,
+        attribution: '地理院タイル'
+    }
+);
+
+const gsiPhoto = L.tileLayer(
+    'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+    {
+        maxZoom: 18,
+        attribution: '地理院タイル（航空写真）'
+    }
+);
+
+// 標準地図を初期表示
+gsiStandard.addTo(map);
+
+// 右上のレイヤー切替
+L.control.layers(
+    {
+        '🗺️ 標準地図': gsiStandard,
+        '🛰️ 航空写真': gsiPhoto
+    },
+    null,
+    {
+        collapsed: false,
+        position: 'topright'
+    }
+).addTo(map);
+
+
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{
+    maxZoom:18,
+    attribution:'地理院タイル | 国土地理院'
+}).addTo(map);
+
+let selectedLocation=null;
+let selectedRating=0;
+let editingId=null;
+let currentFilter='all';
+const markerMap=new Map();
+
+
+let selectedPhotoData=[];
+
+const photoInput=document.getElementById('onsenPhoto');
+const photoPreview=document.getElementById('photoPreview');
+const removePhotoButton=document.getElementById('removePhotoButton');
+
+photoInput.addEventListener('change',()=>{
+    const files=Array.from(photoInput.files);
+    if(!files.length)return;
+
+    if(files.length>5){
+        alert('写真は最大5枚までです。');
+        photoInput.value='';
+        return;
+    }
+
+    const oversized=files.find(file=>file.size>10*1024*1024);
+    if(oversized){
+        alert('1枚につき10MB以下の写真を選択してください。');
+        photoInput.value='';
+        return;
+    }
+
+    Promise.all(files.map(file=>readAndCompressPhoto(file)))
+        .then(images=>{
+            selectedPhotoData=images;
+            renderPhotoPreview();
+        })
+        .catch(()=>{
+            alert('写真の処理に失敗しました。別の写真を試してください。');
+            photoInput.value='';
+        });
+});
+
+function readAndCompressPhoto(file){
+    return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>{
+            compressPhoto(reader.result).then(resolve).catch(reject);
+        };
+        reader.onerror=reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function compressPhoto(dataUrl){
+    return new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>{
+            const maxSize=1600;
+            const scale=Math.min(1,maxSize/Math.max(img.width,img.height));
+            const canvas=document.createElement('canvas');
+            canvas.width=Math.max(1,Math.round(img.width*scale));
+            canvas.height=Math.max(1,Math.round(img.height*scale));
+            const ctx=canvas.getContext('2d');
+            if(!ctx){reject(new Error('canvas unavailable'));return;}
+            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+            resolve(canvas.toDataURL('image/jpeg',0.82));
+        };
+        img.onerror=reject;
+        img.src=dataUrl;
+    });
+}
+
+removePhotoButton.addEventListener('click',()=>{
+    selectedPhotoData=[];
+    photoInput.value='';
+    renderPhotoPreview();
+});
+
+function renderPhotoPreview(){
+    photoPreview.innerHTML=selectedPhotoData.map(src=>`<img src="${src}" alt="写真プレビュー">`).join('');
+    removePhotoButton.style.display=selectedPhotoData.length?'inline-block':'none';
+}
+
+const stars=document.querySelectorAll('.star');
+
+function getRecords(){
+    return JSON.parse(localStorage.getItem('onsenRecords')||'[]');
+}
+function saveRecords(records){
+    localStorage.setItem('onsenRecords',JSON.stringify(records));
+}
+function escapeHtml(text){
+    const div=document.createElement('div');
+    div.textContent=text ?? '';
+    return div.innerHTML;
+}
+
+document.getElementById('locationButton').addEventListener('click',()=>{
+    map.locate({setView:true,maxZoom:16});
+});
+map.on('locationfound',e=>{
+    L.marker(e.latlng).addTo(map).bindPopup('📍 現在地').openPopup();
+});
+map.on('locationerror',()=>alert('現在地を取得できませんでした。'));
+
+document.getElementById('addOnsenButton').addEventListener('click',()=>{
+    alert('温泉を追加します。\n\n地図上の温泉の場所をクリックしてください。');
+    map.once('click',e=>{
+        resetForm();
+        selectedLocation=e.latlng;
+        editingId=null;
+        openRegisterPanel();
+    });
+});
+
+function openRegisterPanel(){
+    document.getElementById('overlay').style.display='block';
+    document.getElementById('registerPanel').style.display='block';
+    document.getElementById('onsenName').focus();
+}
+function closeRegisterPanel(){
+    document.getElementById('registerPanel').style.display='none';
+    if(document.getElementById('listPanel').style.display!=='block'){
+        document.getElementById('overlay').style.display='none';
+    }
+}
+function openListPanel(){
+    document.getElementById('overlay').style.display='block';
+    document.getElementById('listPanel').style.display='block';
+    renderList();
+}
+function closeListPanel(){
+    document.getElementById('listPanel').style.display='none';
+    if(document.getElementById('registerPanel').style.display!=='block'){
+        document.getElementById('overlay').style.display='none';
+    }
+}
+
+document.getElementById('cancelButton').addEventListener('click',()=>{
+    closeRegisterPanel();
+    resetForm();
+});
+document.getElementById('registerClose').addEventListener('click',()=>{
+    closeRegisterPanel();
+    resetForm();
+});
+document.getElementById('listButton').addEventListener('click',openListPanel);
+document.getElementById('listClose').addEventListener('click',closeListPanel);
+
+stars.forEach(star=>{
+    star.addEventListener('click',()=>{
+        selectedRating=Number(star.dataset.value);
+        updateStars();
+    });
+});
+function updateStars(){
+    stars.forEach(star=>{
+        star.classList.toggle('selected',Number(star.dataset.value)<=selectedRating);
+    });
+}
+
+document.getElementById('saveButton').addEventListener('click',()=>{
+    const name=document.getElementById('onsenName').value.trim();
+    if(!name){alert('温泉名を入力してください。');return;}
+    if(!selectedLocation){alert('温泉の場所を選択してください。');return;}
+
+    const features=Array.from(document.querySelectorAll('.checkbox-group input:checked')).map(c=>c.value);
+    const records=getRecords();
+
+    if(editingId!==null){
+        const index=records.findIndex(o=>o.id===editingId);
+        if(index===-1){alert('温泉データが見つかりません。');return;}
+
+        records[index].name=name;
+        records[index].lat=selectedLocation.lat;
+        records[index].lng=selectedLocation.lng;
+        records[index].rating=selectedRating;
+        records[index].favorite=document.getElementById('favorite').checked;
+        records[index].prefecture=document.getElementById('prefecture').value;
+        records[index].visitDate=document.getElementById('visitDate').value;
+        records[index].price=document.getElementById('price').value;
+        records[index].quality=document.getElementById('quality').value.trim();
+        records[index].tags=parseTags(document.getElementById('tags').value);
+        records[index].features=features;
+        records[index].memo=document.getElementById('memo').value.trim();
+        records[index].photos=[...selectedPhotoData];
+        records[index].photo=selectedPhotoData[0]||null;
+        records[index].website=document.getElementById('website').value.trim();
+
+        saveRecords(records);
+        reloadMarkers();
+        closeRegisterPanel();
+        resetForm();
+        alert('♨️ 温泉情報を更新しました！');
+        return;
+    }
+
+    const onsen={
+        id:Date.now(),
+        name,
+        lat:selectedLocation.lat,
+        lng:selectedLocation.lng,
+        rating:selectedRating,
+        favorite:document.getElementById('favorite').checked,
+        prefecture:document.getElementById('prefecture').value,
+        visitDate:document.getElementById('visitDate').value || new Date().toISOString().slice(0,10),
+        price:document.getElementById('price').value,
+        quality:document.getElementById('quality').value.trim(),
+        tags:parseTags(document.getElementById('tags').value),
+        features,
+        memo:document.getElementById('memo').value.trim(),
+        photos:[...selectedPhotoData],
+        photo:selectedPhotoData[0]||null,
+        website:document.getElementById('website').value.trim(),
+        date:new Date().toLocaleDateString('ja-JP')
+    };
+
+    records.push(onsen);
+    saveRecords(records);
+    addOnsenMarker(onsen);
+    closeRegisterPanel();
+    resetForm();
+    alert('♨️ 温泉を記録しました！');
+});
+
+function addOnsenMarker(onsen){
+    const icon=L.divIcon({
+        className:'',
+        html:'<div class="onsen-marker"><span>♨</span></div>',
+        iconSize:[44,44],
+        iconAnchor:[22,44],
+        popupAnchor:[0,-44]
+    });
+
+    const marker=L.marker([onsen.lat,onsen.lng],{icon}).addTo(map);
+    marker.onsenId=onsen.id;
+    markerMap.set(onsen.id,marker);
+
+    let starsText='';
+    for(let i=0;i<5;i++) starsText+=i<onsen.rating?'★':'☆';
+
+    const featuresText=onsen.features.length?onsen.features.join('・'):'なし';
+
+    marker.bindPopup(`
+        <div class="popup-title">♨️ ${escapeHtml(onsen.name)} ${onsen.favorite?'❤️':''}</div>
+        ${((onsen.photos&&onsen.photos.length)?onsen.photos:(onsen.photo?[onsen.photo]:[])).map(src=>`<img class="popup-photo" src="${src}" alt="${escapeHtml(onsen.name)}">`).join('')}
+        <div class="popup-stars">${starsText}</div>
+        📅 ${escapeHtml(onsen.date)}<br>
+        ☑️ ${escapeHtml(featuresText)}<br><br>
+        📝 ${onsen.memo?escapeHtml(onsen.memo):'メモなし'}
+        ${onsen.website?`<br><a class="popup-link" href="${escapeHtml(onsen.website)}" target="_blank" rel="noopener noreferrer">🌐 ウェブサイトを開く</a>`:''}
+        <div class="popup-buttons">
+            <button class="navigate-button" onclick="navigateToOnsen(${onsen.lat},${onsen.lng})">🧭 ここへ行く</button>
+            <button class="edit-button" onclick="editOnsen(${onsen.id})">✏️ 編集</button>
+            <button class="delete-button" onclick="deleteOnsen(${onsen.id})">🗑️ 削除</button>
+        </div>
+    `);
+}
+
+function parseTags(value){
+    return String(value||'').split(/[,、]/).map(s=>s.trim()).filter(Boolean).slice(0,10);
+}
+
+function reloadMarkers(){
+    markerMap.forEach(marker=>map.removeLayer(marker));
+    markerMap.clear();
+    getRecords().forEach(addOnsenMarker);
+}
+
+let currentDetailId=null;
+
+function openOnsenDetail(id){
+    const onsen=getRecords().find(o=>o.id===id);
+    if(!onsen)return;
+
+    currentDetailId=id;
+    const photos=Array.isArray(onsen.photos)?onsen.photos:(onsen.photo?[onsen.photo]:[]);
+    const stars='★'.repeat(Number(onsen.rating)||0)+'☆'.repeat(5-(Number(onsen.rating)||0));
+    const features=Array.isArray(onsen.features)?onsen.features:[];
+
+    document.getElementById('detailContent').innerHTML=`
+        <div class="detail-title">♨️ ${escapeHtml(onsen.name)} <span class="detail-favorite">${onsen.favorite?'❤️':''}</span></div>
+        <div class="detail-stars">${stars}</div>
+
+        ${photos.length?`
+        <div class="detail-gallery">
+            ${photos.map(src=>`<img src="${src}" alt="${escapeHtml(onsen.name)}" onclick="window.open(this.src,'_blank')">`).join('')}
+        </div>`:''}
+
+        <div class="detail-section">
+            <div class="detail-section-title">🗾 都道府県</div><div>${escapeHtml(onsen.prefecture||"未記録")}</div></div><div class="detail-section"><div class="detail-section-title">📅 訪問日</div>
+            <div>${escapeHtml(onsen.visitDate||onsen.date||'記録日なし')}</div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">💰 入浴料金</div>
+            <div>${onsen.price!==undefined && onsen.price!=='' ? escapeHtml(String(onsen.price))+' 円' : '未記録'}</div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">💧 泉質</div>
+            <div>${onsen.quality?escapeHtml(onsen.quality):'未記録'}</div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">🏷️ タグ</div>
+            <div class="detail-tags">
+                ${Array.isArray(onsen.tags)&&onsen.tags.length?onsen.tags.map(t=>`<span class="detail-tag">${escapeHtml(t)}</span>`).join(''):'未登録'}
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">☑️ 設備</div>
+            <div class="detail-features">
+                ${features.length?features.map(f=>`<span class="detail-feature">${escapeHtml(f)}</span>`).join(''):'<span>登録なし</span>'}
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">📝 コメント</div>
+            <div class="detail-memo">${onsen.memo?escapeHtml(onsen.memo):'コメントなし'}</div>
+        </div>
+
+        ${onsen.website?`
+        <div class="detail-section">
+            <div class="detail-section-title">🌐 ウェブサイト</div>
+            <a class="detail-link" href="${escapeHtml(onsen.website)}" target="_blank" rel="noopener noreferrer">ウェブサイトを開く</a>
+        </div>`:''}
+
+        <div class="detail-actions">
+            <button class="detail-nav" onclick="navigateToOnsen(${onsen.lat},${onsen.lng})">🧭 ここへ行く</button>
+            <button class="detail-edit" onclick="closeOnsenDetail();editOnsen(${onsen.id})">✏️ 編集</button>
+            <button class="detail-delete" onclick="closeOnsenDetail();deleteOnsen(${onsen.id})">🗑️ 削除</button>
+        </div>
+    `;
+
+    document.getElementById('overlay').style.display='block';
+    document.getElementById('detailPanel').style.display='block';
+}
+
+function closeOnsenDetail(){
+    document.getElementById('detailPanel').style.display='none';
+    currentDetailId=null;
+    document.getElementById('overlay').style.display='none';
+}
+
+document.getElementById('detailClose').addEventListener('click',closeOnsenDetail);
+
+loadOnsens();
+function navigateToOnsen(lat,lng){
+    const url=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat+','+lng)}`;
+    window.open(url,'_blank');
+}
+
+function loadOnsens(){
+    getRecords().forEach(addOnsenMarker);
+}
+
+window.editOnsen=function(id){
+    const onsen=getRecords().find(item=>item.id===id);
+    if(!onsen){alert('温泉データが見つかりません。');return;}
+
+    editingId=id;
+    selectedLocation={lat:onsen.lat,lng:onsen.lng};
+    document.getElementById('onsenName').value=onsen.name;
+    document.getElementById('prefecture').value=onsen.prefecture||'';
+    document.getElementById('visitDate').value=onsen.visitDate||onsen.date||'';
+    document.getElementById('price').value=onsen.price||'';
+    document.getElementById('quality').value=onsen.quality||'';
+    document.getElementById('tags').value=Array.isArray(onsen.tags)?onsen.tags.join('、'):(onsen.tags||'');
+    document.getElementById('favorite').checked=!!onsen.favorite;
+    selectedRating=onsen.rating||0;
+    updateStars();
+
+    document.querySelectorAll('.checkbox-group input').forEach(c=>{
+        c.checked=onsen.features.includes(c.value);
+    });
+
+    document.getElementById('memo').value=onsen.memo||'';
+    document.getElementById('website').value=onsen.website||'';
+    selectedPhotoData=Array.isArray(onsen.photos)?[...onsen.photos]:(onsen.photo?[onsen.photo]:[]);
+    renderPhotoPreview();
+    document.getElementById('panelTitle').textContent='✏️ 温泉を編集';
+    document.getElementById('saveButton').textContent='💾 更新する';
+
+    closeListPanel();
+    openRegisterPanel();
+};
+
+window.deleteOnsen=function(id){
+    const records=getRecords();
+    const onsen=records.find(item=>item.id===id);
+    if(!onsen)return;
+
+    if(!confirm(`♨️ ${onsen.name}\n\nこの温泉記録を削除しますか？`))return;
+
+    saveRecords(records.filter(item=>item.id!==id));
+    reloadMarkers();
+    renderList();
+};
+
+function editOnsen(id){
+    const records=getRecords();
+    const onsen=records.find(o=>o.id===id);
+    if(!onsen){
+        alert('温泉データが見つかりません。');
+        return;
+    }
+
+    editingId=onsen.id;
+    selectedLocation=L.latLng(Number(onsen.lat),Number(onsen.lng));
+    selectedRating=Number(onsen.rating)||0;
+
+    document.getElementById('onsenName').value=onsen.name||'';
+    document.getElementById('prefecture').value=onsen.prefecture||'';
+    document.getElementById('visitDate').value=onsen.visitDate||onsen.date||'';
+    document.getElementById('price').value=onsen.price??'';
+    document.getElementById('quality').value=onsen.quality||'';
+    document.getElementById('tags').value=Array.isArray(onsen.tags)?onsen.tags.join('、'):(onsen.tags||'');
+    document.getElementById('favorite').checked=!!onsen.favorite;
+    document.getElementById('memo').value=onsen.memo||'';
+    document.getElementById('website').value=onsen.website||'';
+
+    document.querySelectorAll('.checkbox-group input').forEach(c=>{
+        c.checked=Array.isArray(onsen.features)&&onsen.features.includes(c.value);
+    });
+
+    selectedPhotoData=Array.isArray(onsen.photos)
+        ? [...onsen.photos]
+        : (onsen.photo?[onsen.photo]:[]);
+    document.getElementById('onsenPhoto').value='';
+    renderPhotoPreview();
+    updateStars();
+
+    document.getElementById('panelTitle').textContent='♨️ 温泉を編集';
+    document.getElementById('saveButton').textContent='💾 変更を保存';
+
+    document.querySelectorAll('.panel').forEach(p=>p.style.display='none');
+    document.getElementById('listPanel').style.display='none';
+    document.getElementById('statsPanel').style.display='none';
+    const detail=document.getElementById('detailPanel');
+    if(detail) detail.style.display='none';
+
+    document.getElementById('overlay').style.display='block';
+    document.getElementById('registerPanel').style.display='block';
+    document.getElementById('onsenName').focus();
+
+    const marker=markerMap.get(id);
+    if(marker) marker.closePopup();
+}
+
+function deleteOnsen(id){
+    const records=getRecords();
+    const onsen=records.find(o=>o.id===id);
+    if(!onsen)return;
+
+    if(!confirm(`「${onsen.name}」を削除しますか？\nこの操作は元に戻せません。`))return;
+
+    saveRecords(records.filter(o=>o.id!==id));
+    reloadMarkers();
+    renderList();
+    renderStats();
+    const detail=document.getElementById('detailPanel');
+    if(detail) detail.style.display='none';
+    document.getElementById('overlay').style.display='none';
+}
+
+function resetForm(){
+    document.getElementById('onsenName').value='';
+    document.getElementById('prefecture').value='';
+    document.getElementById('visitDate').value=new Date().toISOString().slice(0,10);
+    document.getElementById('price').value='';
+    document.getElementById('quality').value='';
+    document.getElementById('tags').value='';
+    document.getElementById('favorite').checked=false;
+    document.getElementById('memo').value='';
+    document.getElementById('website').value='';
+    document.getElementById('onsenPhoto').value='';
+    selectedPhotoData=[];
+    renderPhotoPreview();
+    document.querySelectorAll('.checkbox-group input').forEach(c=>c.checked=false);
+    selectedRating=0;
+    selectedLocation=null;
+    editingId=null;
+    updateStars();
+    document.getElementById('panelTitle').textContent='♨️ 温泉を記録';
+    document.getElementById('saveButton').textContent='💾 記録する';
+}
+
+document.querySelectorAll('.filter-button').forEach(button=>{
+    button.addEventListener('click',()=>{
+        document.querySelectorAll('.filter-button').forEach(b=>b.classList.remove('active'));
+        button.classList.add('active');
+        currentFilter=button.dataset.filter;
+        renderList();
+    });
+});
+document.getElementById('searchBox').addEventListener('input',renderList);
+
+function matchesFilter(onsen){
+    if(currentFilter==='all')return true;
+    if(currentFilter==='favorite')return !!onsen.favorite;
+    if(currentFilter==='5')return onsen.rating===5;
+    if(currentFilter==='sauna')return onsen.features.includes('サウナ');
+    if(currentFilter==='family')return onsen.features.includes('家族風呂');
+    if(currentFilter==='open')return onsen.features.includes('露天風呂');
+    if(currentFilter==='kakenagashi')return onsen.features.includes('源泉かけ流し');
+    return true;
+}
+
+function renderList(){
+    const list=document.getElementById('onsenList');
+    const search=document.getElementById('searchBox').value.trim().toLowerCase();
+    let records=getRecords().filter(matchesFilter);
+
+    if(search){
+        records=records.filter(o=>
+            o.name.toLowerCase().includes(search) ||
+            (o.memo||'').toLowerCase().includes(search) ||
+            o.features.some(f=>f.toLowerCase().includes(search))
+        );
+    }
+
+    document.getElementById('listCount').textContent=`${records.length}件`;
+
+    if(!records.length){
+        list.innerHTML='<div class="empty-list">該当する温泉がありません♨️</div>';
+        return;
+    }
+
+    records.sort((a,b)=>b.id-a.id);
+
+    list.innerHTML=records.map(o=>{
+        let stars='';
+        for(let i=0;i<5;i++)stars+=i<o.rating?'★':'☆';
+
+        return `
+            <div class="onsen-item" data-id="${o.id}">
+                <div class="onsen-item-title">♨️ ${escapeHtml(o.name)} ${o.favorite?'<span class="favorite-badge">❤️</span>':''}</div>
+                <div class="onsen-item-stars">${stars}</div>
+                <div class="onsen-item-meta">📅 ${escapeHtml(o.visitDate||o.date||'')}　${escapeHtml(o.features.join('・'))}</div>
+                <div class="onsen-item-meta">${o.price!==undefined&&o.price!==''?'💰 '+escapeHtml(String(o.price))+'円　':''}${o.quality?'💧 '+escapeHtml(o.quality)+'　':''}${o.photo?'📷 写真あり　':''}${o.website?'🌐 サイトあり':''}</div>
+                <div class="onsen-item-meta">${Array.isArray(o.tags)&&o.tags.length?'🏷️ '+o.tags.map(escapeHtml).join(' ・ '):''}</div>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('.onsen-item').forEach(item=>{
+        item.addEventListener('click',()=>{
+            const id=Number(item.dataset.id);
+            const marker=markerMap.get(id);
+            if(!marker)return;
+
+            closeListPanel();
+            map.setView(marker.getLatLng(),16);
+            marker.openPopup();
+        });
+    });
+}
+
+
+const statsButton=document.getElementById('statsButton');
+const statsPanel=document.getElementById('statsPanel');
+const statsClose=document.getElementById('statsClose');
+
+function openStatsPanel(){
+    document.getElementById('overlay').style.display='block';
+    statsPanel.style.display='block';
+    renderStats();
+    updateExtraStats();
+}
+function closeStatsPanel(){
+    statsPanel.style.display='none';
+    if(document.getElementById('registerPanel').style.display!=='block' &&
+       document.getElementById('listPanel').style.display!=='block'){
+        document.getElementById('overlay').style.display='none';
+    }
+}
+statsButton.addEventListener('click',openStatsPanel);
+statsClose.addEventListener('click',closeStatsPanel);
+
+function renderStats(){
+    const records=getRecords();
+
+    document.getElementById('statTotal').textContent=records.length;
+    document.getElementById('statFive').textContent=records.filter(o=>o.rating===5).length;
+    const favoriteElement=document.getElementById('statFavorite');
+    if(favoriteElement) favoriteElement.textContent=records.filter(o=>!!o.favorite).length;
+
+    const rated=records.filter(o=>Number(o.rating)>0);
+    const average=rated.length
+        ? rated.reduce((sum,o)=>sum+Number(o.rating),0)/rated.length
+        : 0;
+    document.getElementById('statAverage').textContent=average.toFixed(1);
+
+    document.getElementById('statSauna').textContent=
+        records.filter(o=>o.features.includes('サウナ')).length;
+
+    const features=['露天風呂','サウナ','水風呂','家族風呂','源泉かけ流し','食事処'];
+    document.getElementById('featureStats').innerHTML=features.map(feature=>{
+        const count=records.filter(o=>o.features.includes(feature)).length;
+        return `<div class="feature-row"><span>${escapeHtml(feature)}</span><strong>${count}件</strong></div>`;
+    }).join('');
+
+    const recent=[...records].sort((a,b)=>b.id-a.id).slice(0,5);
+    document.getElementById('recentStats').innerHTML=recent.length
+        ? recent.map(o=>{
+            let stars='';
+            for(let i=0;i<5;i++) stars+=i<o.rating?'★':'☆';
+            return `<div class="recent-row"><strong>♨️ ${escapeHtml(o.name)}</strong><br><span class="popup-stars">${stars}</span>　${escapeHtml(o.date)}</div>`;
+        }).join('')
+        : '<div class="empty-list">まだ温泉が記録されていません♨️</div>';
+}
+
+
+const backupButton=document.getElementById('backupButton');
+const backupPanel=document.getElementById('backupPanel');
+const backupClose=document.getElementById('backupClose');
+const exportButton=document.getElementById('exportButton');
+const importButton=document.getElementById('importButton');
+const importFile=document.getElementById('importFile');
+
+backupButton.addEventListener('click',()=>{
+    document.getElementById('overlay').style.display='block';
+    backupPanel.style.display='block';
+});
+backupClose.addEventListener('click',()=>{
+    backupPanel.style.display='none';
+    document.getElementById('overlay').style.display='none';
+});
+
+exportButton.addEventListener('click',()=>{
+    const records=getRecords();
+    const data={
+        app:'温泉記録',
+        version:2,
+        exportedAt:new Date().toISOString(),
+        records
+    };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const date=new Date().toISOString().slice(0,10);
+    a.href=url;
+    a.download=`onsen-backup-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('💾 バックアップを保存しました！');
+});
+
+importButton.addEventListener('click',()=>importFile.click());
+
+importFile.addEventListener('change',()=>{
+    const file=importFile.files[0];
+    if(!file)return;
+
+    const reader=new FileReader();
+    reader.onload=()=>{
+        try{
+            const parsed=JSON.parse(reader.result);
+            const records=Array.isArray(parsed)?parsed:parsed.records;
+
+            if(!Array.isArray(records))throw new Error('invalid');
+
+            if(!confirm(`📥 ${records.length}件の温泉記録を復元します。\n\n現在の記録は置き換えられます。よろしいですか？`))return;
+
+            saveRecords(records);
+            reloadMarkers();
+            backupPanel.style.display='none';
+            document.getElementById('overlay').style.display='none';
+            alert('📥 バックアップから復元しました！');
+        }catch(e){
+            alert('バックアップファイルを読み込めませんでした。');
+        }finally{
+            importFile.value='';
+        }
+    };
+    reader.readAsText(file);
+});
+
+loadOnsens();
+
+function updateExtraStats(){
+ const records=getRecords(), counts={};
+ records.forEach(o=>{if(o.prefecture)counts[o.prefecture]=(counts[o.prefecture]||0)+1});
+ const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+ const p=document.getElementById('prefectureStats');
+ if(p)p.innerHTML=rows.length?'<div class="pref-stats">'+rows.map(([k,v])=>`<div class="pref-row"><span>🗾 ${escapeHtml(k)}</span><strong>${v}件</strong></div>`).join('')+'</div>':'未登録';
+ const h=document.getElementById('visitHistory');
+ if(h){const s=[...records].sort((a,b)=>String(b.visitDate||b.date||'').localeCompare(String(a.visitDate||a.date||'')));h.innerHTML=s.length?'<div class="history-list">'+s.map(o=>`<div class="history-row"><span>${escapeHtml(o.visitDate||o.date||'')}</span><span>♨️ ${escapeHtml(o.name)}</span><span class="history-pref">${escapeHtml(o.prefecture||'')}</span></div>`).join('')+'</div>':'まだ記録がありません。'}
+}
+
+updateExtraStats();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('Service Worker登録に失敗:', err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
