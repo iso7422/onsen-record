@@ -25,7 +25,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
 .menu button:hover{background:#eee}
 
 .onsen-marker{width:38px;height:38px;background:#e53935;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
-.onsen-marker.unvisited{background:#c7c7c7}.onsen-marker.unvisited span{color:#666}.onsen-marker span{color:#fff !important;font-size:23px;font-weight:bold;transform:rotate(45deg);line-height:1}
+.onsen-marker.unvisited{background:#c7c7c7}.onsen-marker.unvisited span{color:#fff}.onsen-marker span{color:#fff !important;font-size:23px;font-weight:bold;transform:rotate(45deg);line-height:1}
 
 #overlay{display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.35);pointer-events:auto}
 #registerPanel,#listPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3000;pointer-events:auto;width:90%;max-width:440px;max-height:90vh;overflow-y:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 25px rgba(0,0,0,.35);box-sizing:border-box}
@@ -500,6 +500,13 @@ function getRecords(){
 function saveRecords(records){
     localStorage.setItem('onsenRecords',JSON.stringify(records));
 }
+
+// v4: 初期温泉データ導入版から完全リセット。以後は再リセットしない。
+const DATA_VERSION='4';
+if(localStorage.getItem('onsenDataVersion')!==DATA_VERSION){
+    localStorage.removeItem('onsenRecords');
+    localStorage.setItem('onsenDataVersion',DATA_VERSION);
+}
 function escapeHtml(text){
     const div=document.createElement('div');
     div.textContent=text ?? '';
@@ -757,60 +764,7 @@ function closeOnsenDetail(){
 
 document.getElementById('detailClose').addEventListener('click',closeOnsenDetail);
 
-const YAMAGUCHI_ONSEN_SEEDS = [
-  ['湯田温泉','山口市',34.1723,131.4540],
-  ['長門湯本温泉','長門市',34.3264,131.1729],
-  ['川棚温泉','下関市',34.1418,130.9368],
-  ['一の俣温泉','下関市',34.2455,130.9875],
-  ['下関つくの温泉','下関市',34.3580,130.8780],
-  ['大城温泉・潮騒の湯','下松市',34.0005,131.6760],
-  ['湯野温泉','周南市',34.0790,131.7580],
-  ['はぎ温泉','萩市',34.4085,131.4025],
-  ['俵山温泉','長門市',34.2835,131.1050],
-  ['雙津峡温泉（SOZU温泉）','岩国市',34.3720,132.0100],
-  ['柚木慈生温泉','山口市',34.3240,131.7080],
-  ['錦帯橋温泉','岩国市',34.1680,132.1780],
-  ['油谷湾温泉','長門市',34.3780,131.0530],
-  ['深谷峡温泉　清流の郷','岩国市',34.4200,132.0350],
-  ['くだまつ健康パーク（鶴ヶ浜温泉）','下松市',34.0200,131.8650],
-  ['田万川温泉 憩いの湯','萩市',34.6560,131.6480],
-  ['竜崎温泉','周防大島町',33.9080,132.2700],
-  ['片添ヶ浜温泉','周防大島町',33.9060,132.3020],
-  ['景清洞トロン温泉','美祢市',34.2280,131.1950],
-  ['萩阿武川温泉ふれあい会館','萩市',34.4170,131.5480],
-  ['萩本陣温泉（萩本陣　湯の丸）','萩市',34.4100,131.4090],
-  ['湯免温泉','長門市',34.3640,131.1820],
-  ['石船温泉','周南市',34.2190,131.7240],
-  ['宮野温泉','山口市',34.2100,131.5140],
-  ['津波敷温泉','下関市',34.2700,130.9050],
-  ['長沢温泉','山口市',34.0600,131.4500],
-  ['吉見温泉（吉見温泉センター）','下関市',34.0960,130.9550],
-  ['江汐温泉','山陽小野田市',34.0190,131.1760],
-  ['日乃出温泉','下関市',33.9570,130.9400],
-  ['片倉温泉','宇部市',33.9830,131.2700],
-  ['三丘温泉','周南市',34.0200,131.9800],
-  ['呼鶴温泉','周南市',34.0000,132.0200]
-];
-
-function seedYamaguchiOnsens(){
-  const records=getRecords();
-  let changed=false;
-  YAMAGUCHI_ONSEN_SEEDS.forEach((item,i)=>{
-    const [name,prefecture,lat,lng]=item;
-    if(records.some(o=>String(o.name).trim()===name)) return;
-    records.push({
-      id:-100000-i,
-      name, prefecture, lat, lng,
-      rating:0, favorite:false, visitDate:'', price:'', quality:'', tags:[],
-      features:[], memo:'山口県観光サイト掲載の温泉。位置は代表地点の暫定座標です。必要なら編集・削除できます。',
-      photos:[], photo:null, website:'', date:'', seeded:true
-    });
-    changed=true;
-  });
-  if(changed) saveRecords(records);
-}
-
-seedYamaguchiOnsens();
+// 初期温泉データは登録しない。ユーザーが自分で追加した施設だけを表示する。
 loadOnsens();
 function navigateToOnsen(lat,lng){
     const url=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat+','+lng)}`;
@@ -1176,8 +1130,6 @@ importFile.addEventListener('change',()=>{
     reader.readAsText(file);
 });
 
-loadOnsens();
-
 function updateExtraStats(){
  const records=getRecords(), counts={};
  records.forEach(o=>{if(o.prefecture)counts[o.prefecture]=(counts[o.prefecture]||0)+1});
@@ -1194,7 +1146,7 @@ updateExtraStats();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => {
+    navigator.serviceWorker.register('./sw.js?v=5').catch(err => {
       console.warn('Service Worker登録に失敗:', err);
     });
   });
